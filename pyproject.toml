@@ -1,0 +1,38 @@
+[project]
+name = "ytdlp-downloader"
+version = "0.1.0"
+description = "Asynchronous Video Downloader API with FastAPI + yt-dlp"
+readme = "README.md"
+requires-python = ">=3.13"
+authors = [
+    { name = "Zain Ul Hassan", email = "zainulhassan4330@gmail.com" }
+]
+dependencies = [
+    "fastapi>=0.116.1",
+    "pydantic>=2.11.7",
+    "redis>=6.4.0",
+    "uvicorn[standard]>=0.35.0",
+    "yt-dlp>=2025.9.5",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.1.0",
+    "ruff>=0.13.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py313"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py313"
+select = ["E", "F", "B", "I"]
+ignore = ["E501"]  # Ignore long-line rule (Black handles this)
+fix = true
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
