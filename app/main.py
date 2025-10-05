@@ -1,8 +1,5 @@
 from fastapi import FastAPI
+from routes import downloads_router
 
 app = FastAPI()
-
-
-@app.get("/health")
-async def health():
-    return {"status": "healthy"}
+app.include_router(downloads_router)
