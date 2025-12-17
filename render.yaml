@@ -1,0 +1,64 @@
+services:
+  # FastAPI Web Service
+  - type: web
+    name: ytdlp-api
+    runtime: python
+    buildCommand: pip install uv && uv sync
+    startCommand: uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # Set manually from Neon
+      - key: REDIS_URL
+        fromService:
+          name: ytdlp-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: ytdlp-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          name: ytdlp-redis
+          type: redis
+          property: connectionString
+      - key: DOWNLOAD_DIR
+        value: /tmp/downloads
+      - key: PYTHON_VERSION
+        value: "3.13"
+
+  # Celery Worker Service
+  - type: worker
+    name: ytdlp-worker
+    runtime: python
+    buildCommand: pip install uv && uv sync
+    startCommand: uv run celery -A app.worker.celery_app worker --loglevel=info
+    envVars:
+      - key: DATABASE_URL
+        sync: false  # Set manually from Neon
+      - key: REDIS_URL
+        fromService:
+          name: ytdlp-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: ytdlp-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          name: ytdlp-redis
+          type: redis
+          property: connectionString
+      - key: DOWNLOAD_DIR
+        value: /tmp/downloads
+      - key: PYTHON_VERSION
+        value: "3.13"
+
+  # Redis Service
+  - type: redis
+    name: ytdlp-redis
+    plan: free
+    maxmemoryPolicy: noeviction
