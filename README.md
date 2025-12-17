@@ -1,84 +1,123 @@
-# Async Video Downloader API 🎥⚡
+# YT-DLP Downloader API
 
-A simple **asynchronous API** built with **FastAPI** that uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) to download videos from various platforms.  
-This project is meant for learning **asynchronous system design**, **task queues**, and **containerized deployments**.
+An asynchronous video downloader API built with **FastAPI**, **Celery**, and **yt-dlp**. Downloads videos from YouTube and other platforms with background task processing.
 
----
+## Features
 
-## ✅ TODO List (Features to Implement)
+- **REST API** for submitting and managing downloads
+- **Background processing** with Celery + Redis
+- **PostgreSQL** for persistent download history
+- **Progress tracking** with real-time status updates
+- **Docker support** for local development and deployment
 
-- [ ] **FastAPI Endpoints**
-  - [ ] `POST /download` → submit video URL for download
-  - [ ] `GET /status/{job_id}` → check progress of a job
-  - [ ] `GET /result/{job_id}` → retrieve download result (file link or path)
+## Tech Stack
 
-- [ ] **Asynchronous Jobs**
-  - [ ] Implement simple background tasks using FastAPI
-  - [ ] Later migrate to **Celery + Redis** for scalable async jobs
+- **FastAPI** - Async web framework
+- **Celery** - Distributed task queue
+- **Redis** - Message broker and result backend
+- **PostgreSQL** - Persistent storage (Neon for production)
+- **yt-dlp** - Video downloader
+- **SQLAlchemy** - Async ORM
+- **Alembic** - Database migrations
+- **Docker** - Containerization
 
-- [ ] **Metadata & Progress Tracking**
-  - [ ] Store job states (`PENDING`, `IN_PROGRESS`, `DONE`, `FAILED`)
-  - [ ] Keep live progress percentage
-  - [ ] Use Redis for ephemeral state
-  - [ ] (Optional) Add PostgreSQL for persistent job history
+## API Endpoints
 
-- [ ] **Storage**
-  - [ ] Save downloaded files to a local volume
-  - [ ] Add support for S3/MinIO for cloud storage
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/downloads` | Submit a video URL for download |
+| `GET` | `/downloads` | List all downloads |
+| `GET` | `/downloads/{id}` | Get download progress |
+| `POST` | `/downloads/{id}/cancel` | Cancel a download |
+| `GET` | `/health` | Health check |
 
-- [ ] **Deployment**
-  - [ ] Create Dockerfile for FastAPI + yt-dlp + ffmpeg
-  - [ ] Add docker-compose with API + Worker + Redis
-  - [ ] Enable volume mounts for downloads
-  - [ ] Prepare for Kubernetes deployment (optional)
+## Quick Start
 
-- [ ] **Enhancements (Future)**
-  - [ ] Real-time progress updates via WebSockets
-  - [ ] Authentication & user-based download history
-  - [ ] Advanced yt-dlp options (audio extraction, subtitles, format selection)
-  - [ ] Rate limiting & job expiration
+### Local Development with Docker
 
----
+```bash
+# Start all services (API, Worker, PostgreSQL, Redis)
+docker-compose up --build
 
-## 🏗️ Basic Architecture
+# API available at http://localhost:8000
+# Docs at http://localhost:8000/docs
+```
 
-**Flow of a video download request:**
+### Local Development without Docker
 
-1. **Client (UI / API consumer)**  
-   - Calls `POST /download` with video URL.  
-   - Polls `/status/{job_id}` for progress.  
-   - Retrieves file using `/result/{job_id}` once complete.  
+```bash
+# Install dependencies
+uv sync
 
-2. **FastAPI Service (API layer)**  
-   - Accepts requests and returns a Job ID.  
-   - Submits download task asynchronously.  
-   - Provides status & result endpoints.  
+# Start Redis and PostgreSQL locally, then:
+export DATABASE_URL=postgresql://user:pass@localhost:5432/ytdlp
+export REDIS_URL=redis://localhost:6379
 
-3. **Task Queue + Worker**  
-   - Worker pulls jobs from queue (BackgroundTask or Celery).  
-   - Executes `yt-dlp` to download video.  
-   - Updates job status in Redis/DB.  
+# Run API
+uv run uvicorn app.main:app --reload
 
-4. **Storage**  
-   - **Redis** → short-term job state + progress.  
-   - **Filesystem / S3** → stores actual video files.  
-   - **PostgreSQL (optional)** → long-term persistent job history.  
+# Run Celery worker (separate terminal)
+uv run celery -A app.worker.celery_app worker --loglevel=info
+```
 
----
+## Deployment
 
-## 📦 Tech Stack
+### Prerequisites
 
-- [FastAPI](https://fastapi.tiangolo.com/) → API framework  
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) → video downloader  
-- [Redis](https://redis.io/) → async job state + queue  
-- [Celery](https://docs.celeryq.dev/) → distributed task queue (future upgrade)  
-- [Docker](https://www.docker.com/) → containerized deployment  
-- [PostgreSQL](https://www.postgresql.org/) (optional) → persistent metadata  
+1. **Neon PostgreSQL**: Create a database at [neon.tech](https://neon.tech)
+2. **Render account**: Sign up at [render.com](https://render.com)
 
----
+### Deploy to Render
 
-## 📄 License
+1. Push code to GitHub
+2. In Render Dashboard: **New** → **Blueprint**
+3. Connect your repository (Render detects `render.yaml`)
+4. Set `DATABASE_URL` environment variable with your Neon connection string
+5. Deploy
 
-MIT License.  
-This project uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) under its respective license.
+### Services Created
 
+- `ytdlp-api` - FastAPI web service
+- `ytdlp-worker` - Celery background worker
+- `ytdlp-redis` - Redis instance
+
+## Environment Variables
+
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `DATABASE_URL` | PostgreSQL connection string | Yes |
+| `REDIS_URL` | Redis connection string | Yes |
+| `CELERY_BROKER_URL` | Celery broker URL (defaults to REDIS_URL) | No |
+| `CELERY_RESULT_BACKEND` | Celery result backend (defaults to REDIS_URL) | No |
+| `DOWNLOAD_DIR` | Directory for downloaded files | No (default: `/tmp/downloads`) |
+
+## Project Structure
+
+```
+app/
+├── config/          # Settings and configuration
+├── db/              # Database models and connection
+├── models/          # Pydantic models and enums
+├── routes/          # API endpoints
+├── services/        # Business logic
+└── worker/          # Celery tasks
+```
+
+## Usage Example
+
+```bash
+# Submit a download
+curl -X POST "http://localhost:8000/downloads" \
+  -H "Content-Type: application/json" \
+  -d '{"url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ"}'
+
+# Check progress
+curl "http://localhost:8000/downloads/{id}"
+
+# List all downloads
+curl "http://localhost:8000/downloads"
+```
+
+## License
+
+MIT License. This project uses [yt-dlp](https://github.com/yt-dlp/yt-dlp) under its respective license.
