@@ -53,3 +53,5 @@ downloads/
 .pixi
 __pypackages__/
 
+# temp files
+temp/
