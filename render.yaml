@@ -26,7 +26,7 @@ services:
       - key: DOWNLOAD_DIR
         value: /tmp/downloads
       - key: PYTHON_VERSION
-        value: "3.13"
+        value: "3.13.11"
 
   # Celery Worker Service
   - type: worker
@@ -55,7 +55,7 @@ services:
       - key: DOWNLOAD_DIR
         value: /tmp/downloads
       - key: PYTHON_VERSION
-        value: "3.13"
+        value: "3.13.11"
 
   # Redis Service
   - type: redis
